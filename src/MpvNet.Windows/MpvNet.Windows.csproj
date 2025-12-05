@@ -6,7 +6,7 @@
 		<RootNamespace>MpvNet.Windows</RootNamespace>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<PublishSingleFile>true</PublishSingleFile>
-		<AssemblyName>mpvnet</AssemblyName>
+		<AssemblyName>gandalfplayer</AssemblyName>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ApplicationIcon>mpv-icon.ico</ApplicationIcon>
