@@ -1,4 +1,7 @@
-﻿
+﻿using System.Globalization;
+using MpvNet.Help;
+using MpvNet.Services;
+
 namespace MpvNet;
 
 public class CommandLine
@@ -114,6 +117,29 @@ public class CommandLine
 
     public static void ProcessCommandLineFiles()
     {
+        // Gandalf link support via service
+        if (Contains("gandalf-link"))
+        {
+            var linkId = GetUrlLinkValue("link-id");
+            var token = GetUrlLinkValue("token");
+            var video = GandalfApi.ResolveVideo(linkId, token);
+            if (video != null && !string.IsNullOrEmpty(video.Url))
+            {
+                GandalfSession.IsGandalf = true;
+                GandalfSession.LinkId = linkId;
+                GandalfSession.Token = token;
+                GandalfSession.WatchedTime = video.WatchedTime;
+                GandalfSession.Name = video.Name ?? "";
+
+                string entry = string.IsNullOrEmpty(video.Name) ? video.Url : ($"{video.Url}|{video.Name}");
+                Player.LoadFiles([entry], false, false);
+                return;
+            }
+            // Exit player if Gandalf link resolution failed
+            Environment.Exit(0);
+
+        }
+
         List<string> files = [];
 
         foreach (string arg in Environment.GetCommandLineArgs().Skip(1))
@@ -155,5 +181,16 @@ public class CommandLine
         }
 
         return "";
+    }
+
+    public static string GetUrlLinkValue(string name)
+    {
+        // Parse url schema like gandalf://open?link-id=123&token=xxx and get value by name
+        var baseValue = GetValue("gandalf-link");
+        if (string.IsNullOrEmpty(baseValue))
+            return "";
+        var uri = new Uri(baseValue);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        return query.Get(name) ?? "";
     }
 }

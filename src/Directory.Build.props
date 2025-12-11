@@ -1,6 +1,6 @@
 ﻿<Project>
 	<PropertyGroup>
-		<Product>mpv.net</Product>
+		<Product>Gandalf-Player</Product>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 </Project>

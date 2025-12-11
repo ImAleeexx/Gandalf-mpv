@@ -13,6 +13,7 @@
 		<FileVersion>7.1.1.6</FileVersion>
 		<AssemblyVersion>7.1.1.6</AssemblyVersion>
 		<InformationalVersion>7.1.1.6</InformationalVersion>
+		<AssemblyTitle>Gandalf Player</AssemblyTitle>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -42,6 +43,21 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" />
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Properties\Settings.Designer.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>Settings.settings</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Properties\Settings.settings">
+	    <Generator>SettingsSingleFileGenerator</Generator>
+	    <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+	  </None>
 	</ItemGroup>
 
 </Project>

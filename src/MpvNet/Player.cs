@@ -1,5 +1,4 @@
-﻿
-using System.Drawing;
+﻿using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -11,6 +10,7 @@ using System.Threading;
 using MpvNet.ExtensionMethod;
 using MpvNet.Help;
 using MpvNet.Native;
+using MpvNet.Services;
 
 using static MpvNet.Native.LibMpv;
 
@@ -183,8 +183,12 @@ public class MainPlayer : MpvClient
             PlaylistPosChanged?.Invoke(value);
 
             if (FileEnded && value == -1)
-                if (GetPropertyString("keep-open") == "no" && App.Exit)
+            {
+                if (GandalfSession.IsGandalf)
                     CommandV("quit");
+                else if (GetPropertyString("keep-open") == "no" && App.Exit)
+                    CommandV("quit");
+            }
         });
 
         Initialized?.Invoke();
@@ -255,7 +259,7 @@ public class MainPlayer : MpvClient
                 _configFolder = Folder.Startup + "portable_config";
 
                 if (!Directory.Exists(_configFolder))
-                    _configFolder = Folder.AppData + "mpv.net";
+                    _configFolder = Folder.AppData + "Gandalf-Player";
 
                 if (!Directory.Exists(_configFolder))
                     Directory.CreateDirectory(_configFolder);

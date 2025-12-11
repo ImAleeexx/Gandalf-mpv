@@ -1,5 +1,4 @@
-﻿
-using System.Drawing;
+﻿using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -19,6 +18,7 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using static MpvNet.Windows.Native.WinApi;
 using static MpvNet.Windows.Help.WinApiHelp;
+using MpvNet.Services;
 
 namespace MpvNet.Windows.WinForms;
 
@@ -44,6 +44,9 @@ public partial class MainForm : Form
     bool _wasMaximized;
     bool _maxSizeSet;
     bool _isCursorVisible = true;
+
+    // Gandalf watch time reporting timer
+    System.Windows.Forms.Timer? _gandalfTimer;
 
     public MainForm()
     {
@@ -662,7 +665,7 @@ public partial class MainForm : Form
         if (width > maxWidth)
         {
             width = maxWidth;
-            height = (int)Math.Floor(width * startHeight / (double)startWidth);
+            height = (int)Math.Floor(width * startHeight / (double)startHeight);
         }
 
         if (height > maxHeight)
@@ -917,6 +920,41 @@ public partial class MainForm : Form
             while (App.Settings.RecentFiles.Count > App.RecentCount)
                 App.Settings.RecentFiles.RemoveAt(App.RecentCount);
         }
+
+        // Gandalf: after file is loaded and buffered, prompt resume and start reporting
+        if (GandalfSession.IsGandalf)
+        {
+            TaskHelp.Run(() =>
+            {
+                Thread.Sleep(500); // wait a bit for buffering
+                BeginInvoke(() =>
+                {
+                    try
+                    {
+                        if (GandalfSession.WatchedTime > 0)
+                        {
+                            var result = Msg.ShowQuestion($"Tienes una visualización sin finalizar\n Avanzar a {TimeSpan.FromSeconds(GandalfSession.WatchedTime)}?");
+                            if (result == System.Windows.MessageBoxResult.OK)
+                            {
+                                Player.CommandV("seek", GandalfSession.WatchedTime.ToString(CultureInfo.InvariantCulture), "absolute");
+                            }
+                        }
+
+                        // start minute watch time reporting
+                        _gandalfTimer ??= new System.Windows.Forms.Timer();
+                        _gandalfTimer.Interval = 20_000; // 20 seconds
+                        _gandalfTimer.Tick += (s, e) =>
+                        {
+                            int seconds = (int)Math.Floor(Player.GetPropertyDouble("time-pos"));
+                            if (seconds > 0)
+                                GandalfApi.ReportWatchTime(GandalfSession.LinkId, GandalfSession.Token, seconds);
+                        };
+                        _gandalfTimer.Start();
+                    }
+                    catch { }
+                });
+            });
+        }
     }
 
     void SetTitle() => BeginInvoke(SetTitleInternal);
@@ -924,6 +962,12 @@ public partial class MainForm : Form
     void SetTitleInternal()
     {
         string? title = Title;
+
+        if (GandalfSession.IsGandalf && !string.IsNullOrEmpty(GandalfSession.Name))
+        {
+            Text = GandalfSession.Name + " - Videoclu de Gandalf";
+            return;
+        }
 
         if (title == "${filename}" && Player.Path.ContainsEx("://"))
             title = "${media-title}";
@@ -1430,6 +1474,10 @@ public partial class MainForm : Form
 
         if (!Player.ShutdownAutoResetEvent.WaitOne(10000))
             Msg.ShowError(_("Shutdown thread failed to complete within 10 seconds."));
+
+        // stop gandalf reporting
+        try { _gandalfTimer?.Stop(); _gandalfTimer?.Dispose(); } catch { }
+        GandalfSession.IsGandalf = false;
 
         Player.Destroy();
     }

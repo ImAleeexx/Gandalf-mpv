@@ -1,7 +1,8 @@
 {
   "profiles": {
     "MpvNet.Windows": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "--gandalf-link=gandalf://open?link-id=1d3a2d61490a6ac4dd7e05e73a05f3de&token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3ZpZGVvY2x1LmltYWxlZXguY29tIiwiYXVkIjoiaHR0cHM6Ly92aWRlb2NsdS5pbWFsZWV4LmNvbSIsImp0aSI6IjUiLCJpYXQiOjE3NjUwNTMwOTguNTUzNTY5LCJleHAiOjE3NjUwNzEwOTguNTUzNTc1LCJ1aWQiOjV9.Scf9ug-wz6iOjf4vBii13sMHVsCN-noHZcaVk40tmvE"
     }
   }
 }
