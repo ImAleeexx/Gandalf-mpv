@@ -9,7 +9,7 @@ AppId={{9AA2B100-BEF3-44D0-B819-D8FC3C4D557E}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher=ImAleex_
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesInstallIn64BitMode=x64os
 Compression=lzma2
 DefaultDirName={autopf}\{#MyAppName}
 OutputBaseFilename=gandalf-player-setup-x64
@@ -36,6 +36,11 @@ Root: HKCR; Subkey: "gandalf\shell\open\command"; ValueType: string; ValueName: 
 
 
 [Code]
+function HasParamGandalf: Boolean;
+begin
+  Result := ExpandConstant('{param:GANDALF}') <> '';
+end;
+
 procedure CreateMpvConfIfNotExists();
 var
   ConfigDir: string;
@@ -69,3 +74,9 @@ begin
     CreateMpvConfIfNotExists();
   end;
 end;
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; \
+Parameters: "--gandalf-link=""{param:GANDALF}"""; \
+Check: HasParamGandalf; \
+Flags: nowait

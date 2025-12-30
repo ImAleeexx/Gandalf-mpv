@@ -10,6 +10,7 @@ public class GandalfVideo
     public string Name { get; set; } = "";
     public string Url  { get; set; } = "";
     public int WatchedTime { get; set; }
+    public string ImageUrl { get; set; } = "";
 }
 
 public static class GandalfSession
@@ -18,7 +19,8 @@ public static class GandalfSession
     public static string LinkId { get; set; } = "";
     public static string Token  { get; set; } = "";
     public static int WatchedTime { get; set; }
-    public static string Name { get; set; } = "";
+    public static String Name { get; set; } = "";
+    public static string ImageUrl { get; set; } = "";
 }
 
 public static class GandalfApi
@@ -43,7 +45,8 @@ public static class GandalfApi
             {
                 Name = root.TryGetProperty("Name", out var nameEl) ? nameEl.GetString() ?? "" : "",
                 Url  = root.TryGetProperty("Url",  out var urlEl)  ? urlEl.GetString()  ?? "" : "",
-                WatchedTime = root.TryGetProperty("WatchedTime", out var wtEl) && wtEl.ValueKind == JsonValueKind.Number ? wtEl.GetInt32() : 0
+                WatchedTime = root.TryGetProperty("WatchedTime", out var wtEl) && wtEl.ValueKind == JsonValueKind.Number ? wtEl.GetInt32() : 0,
+                ImageUrl = root.TryGetProperty("ImageUrl", out var imageUrlEl) ? imageUrlEl.GetString() ?? "" : ""
             };
             if (string.IsNullOrEmpty(gv.Url))
             {
@@ -55,6 +58,54 @@ public static class GandalfApi
         catch (Exception ex)
         {
             Terminal.WriteError($"Error resolving Gandalf link: {ex.Message}");
+            return null;
+        }
+    }
+
+    public static string? GetVersion()
+    {
+        try
+        {
+            using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            var url = $"http://videoclu.imaleex.com/api/videoplayer/version";
+            var resp = client.GetAsync(url).GetAwaiter().GetResult();
+            if (!resp.IsSuccessStatusCode)
+            {
+                Terminal.WriteError($"Failed to get Gandalf version (HTTP {(int)resp.StatusCode}).");
+                return null;
+            }
+            var json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var gv = root.TryGetProperty("version", out var versionEl) ? versionEl.GetString() ?? "" : "";
+            return gv;
+        }
+        catch (Exception ex)
+        {
+            Terminal.WriteError($"Error obtaining version: {ex.Message}");
+            return null;
+        }
+    }
+
+    public static byte[]? GetLatestSetupFile()
+    {
+        try
+        {
+            using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            var url = $"http://videoclu.imaleex.com/api/videoplayer/download";
+            var resp = client.GetAsync(url).GetAwaiter().GetResult();
+            if (!resp.IsSuccessStatusCode)
+            {
+                Terminal.WriteError($"Failed to download new version (HTTP {(int)resp.StatusCode}).");
+                return null;
+            }
+            return resp.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Terminal.WriteError($"Error downloading latest version: {ex.Message}");
             return null;
         }
     }

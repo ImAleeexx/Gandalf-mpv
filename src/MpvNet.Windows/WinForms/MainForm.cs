@@ -1,24 +1,23 @@
-﻿using System.Drawing;
+﻿using CommunityToolkit.Mvvm.Messaging;
+using DiscordRPC;
+using MpvNet.ExtensionMethod;
+using MpvNet.Help;
+using MpvNet.MVVM;
+using MpvNet.Services;
+using MpvNet.Windows.UI;
+using MpvNet.Windows.WPF;
+using MpvNet.Windows.WPF.MsgBox;
+using System;
+using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
-using System.Text.RegularExpressions;
-
-using MpvNet.Windows.WPF;
-using MpvNet.Windows.UI;
-using MpvNet.Help;
-using MpvNet.ExtensionMethod;
-using MpvNet.MVVM;
-using MpvNet.Windows.WPF.MsgBox;
-
-using WpfControls = System.Windows.Controls;
-using CommunityToolkit.Mvvm.Messaging;
-
-using static MpvNet.Windows.Native.WinApi;
 using static MpvNet.Windows.Help.WinApiHelp;
-using MpvNet.Services;
+using static MpvNet.Windows.Native.WinApi;
+using WpfControls = System.Windows.Controls;
 
 namespace MpvNet.Windows.WinForms;
 
@@ -47,12 +46,38 @@ public partial class MainForm : Form
 
     // Gandalf watch time reporting timer
     System.Windows.Forms.Timer? _gandalfTimer;
+    System.Windows.Forms.Timer? _gandalfDiscordTimer;
+    public const string DISCORD_APP_ID = "1454870558184444091";
+    public static DiscordRpcClient client = new DiscordRpcClient(DISCORD_APP_ID);
+    bool _discordStatusSet = false;
 
     public MainForm()
     {
         InitializeComponent();
 
         UpdateDarkMode();
+        DiscordSetup();
+
+
+        // Check for updates in background
+        TaskHelp.Run(() =>
+        {
+            try
+            {
+                if (UpdaterService.CheckAndInstallUpdate())
+                {
+                    // If update is being installed, call the onform closing on the main thread
+                    BeginInvoke(() =>
+                    {
+                        Environment.FailFast("Updating");
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Terminal.WriteError($"Update check failed: {ex.Message}");
+            }
+        });
 
         try
         {
@@ -155,6 +180,45 @@ public partial class MainForm : Form
     {
         if (Environment.OSVersion.Version >= new Version(10, 0, 18985))
             DwmSetWindowAttribute(Handle, 20, new[] { Theme.DarkMode ? 1 : 0 }, 4);  // DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+    }
+
+    void DiscordSetup()
+    {
+            client.Initialize();
+    }
+
+    void DiscordUpdatePresence(int watchedTimeSec, int maxTimeSec, bool isPlaying)
+    {
+        if (!isPlaying && _discordStatusSet)
+        {
+            client.ClearPresence();
+            _discordStatusSet = false;
+            return;
+        }
+        if (GandalfSession.IsGandalf && isPlaying) { 
+            if (!_discordStatusSet) { 
+                var name = GandalfSession.Name.Split(" - ");
+                client.SetPresence(new RichPresence()
+                {
+                    Details = name[0].Trim(),
+                    State = name.Length > 1 ? name.Last() : "",
+                    Assets = new Assets()
+                    {
+                        LargeImageKey = GandalfSession.ImageUrl,
+                        LargeImageText = GandalfSession.Name
+                    },
+                    Type = ActivityType.Watching,
+                    StatusDisplay = StatusDisplayType.Details,
+                    Timestamps = Timestamps.FromTimeSpan(maxTimeSec)
+                });
+                _discordStatusSet = true;
+            } 
+                // Just update the timestamps
+                var startTime = DateTime.UtcNow.AddSeconds(-watchedTimeSec);
+                client.UpdateStartTime(startTime);
+                var endTime = startTime.AddSeconds(maxTimeSec);
+                client.UpdateEndTime(endTime);
+        }
     }
 
     void Player_ClientMessage(string[] args)
@@ -931,6 +995,20 @@ public partial class MainForm : Form
                 {
                     try
                     {
+
+                        _gandalfDiscordTimer ??= new System.Windows.Forms.Timer();
+                        _gandalfDiscordTimer.Interval = 5_000; // 20 seconds
+                        _gandalfDiscordTimer.Tick += (s, e) =>
+                        {
+                            int seconds = (int)Math.Floor(Player.GetPropertyDouble("time-pos"));
+                            int maxSeconds = (int)Math.Floor(Player.GetPropertyDouble("duration"));
+                            bool playingMedia = Player.GetPropertyBool("pause") == false;
+                            DiscordUpdatePresence(seconds, maxSeconds, playingMedia);
+                        };
+                        _gandalfDiscordTimer.Start();
+
+
+
                         if (GandalfSession.WatchedTime > 0)
                         {
                             var result = Msg.ShowQuestion($"Tienes una visualización sin finalizar\n Avanzar a {TimeSpan.FromSeconds(GandalfSession.WatchedTime)}?");
@@ -1478,6 +1556,7 @@ public partial class MainForm : Form
         // stop gandalf reporting
         try { _gandalfTimer?.Stop(); _gandalfTimer?.Dispose(); } catch { }
         GandalfSession.IsGandalf = false;
+        UpdaterService.CleanupUpdateFiles();
 
         Player.Destroy();
     }

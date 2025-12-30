@@ -130,6 +130,7 @@ public class CommandLine
                 GandalfSession.Token = token;
                 GandalfSession.WatchedTime = video.WatchedTime;
                 GandalfSession.Name = video.Name ?? "";
+                GandalfSession.ImageUrl = video.ImageUrl ?? "";
 
                 string entry = string.IsNullOrEmpty(video.Name) ? video.Url : ($"{video.Url}|{video.Name}");
                 Player.LoadFiles([entry], false, false);
