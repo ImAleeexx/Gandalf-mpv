@@ -26,7 +26,8 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Files]
 Source: "{#MyAppSourceDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyAppSourceDir}\*"; DestDir: "{app}"; Excludes: "win-x64,win-arm64"; Flags: ignoreversion recursesubdirs createallsubdirs;
+Source: "{#MyAppSourceDir}\*"; DestDir: "{app}"; Excludes: "win-x64,win-arm64,appdata"; Flags: ignoreversion recursesubdirs createallsubdirs;
+Source: "{#MyAppSourceDir}\appdata\*"; DestDir: "{userappdata}\Gandalf-Player"; Flags: ignoreversion createallsubdirs recursesubdirs;
 
 [Registry]
 Root: HKCR; Subkey: "gandalf"; ValueType: string; ValueName: ""; ValueData: "URL:Gandalf Protocol"; Flags: uninsdeletekey
